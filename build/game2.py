@@ -108,6 +108,7 @@ class Player:
         self.w = PLAYER_WIDTH
         self.h = PLAYER_HEIGHT
         self.is_alive = True
+        self.touch_start_x = None
 
     def update(self):
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
@@ -118,16 +119,28 @@ class Player:
             self.y -= PLAYER_SPEED
         if pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
             self.y += PLAYER_SPEED
+
+        # Touch input to move the player
+        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
+            if self.touch_start_x is None:
+                self.touch_start_x = pyxel.mouse_x
+            self.x = pyxel.mouse_x - PLAYER_WIDTH / 2
+        else:
+            self.touch_start_x = None
+
         self.x = max(self.x, 0)
         self.x = min(self.x, pyxel.width - self.w)
         self.y = max(self.y, 0)
         self.y = min(self.y, pyxel.height - self.h)
 
-        if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
-            Bullet(
-                self.x + (PLAYER_WIDTH - BULLET_WIDTH) / 2, self.y - BULLET_HEIGHT / 2
-            )
-            pyxel.play(3, 0)
+        # Fire bullets continuously while holding touch
+        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
+            if pyxel.frame_count % 5 == 0:  # Adjust the firing rate here
+                Bullet(
+                    self.x + (PLAYER_WIDTH - BULLET_WIDTH) / 2,
+                    self.y - BULLET_HEIGHT / 2,
+                )
+                pyxel.play(3, 0)
 
     def draw(self):
         pyxel.blt(self.x, self.y, 0, 0, 0, self.w, self.h, 0)
@@ -258,7 +271,11 @@ class App:
             self.update_gameover_scene()
 
     def update_title_scene(self):
-        if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X):
+        if (
+            pyxel.btnp(pyxel.KEY_RETURN)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X)
+            or pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+        ):
             self.scene = SCENE_PLAY
             pyxel.playm(1, loop=True)
 
@@ -322,7 +339,11 @@ class App:
         cleanup_entities(bullets)
         cleanup_entities(blasts)
 
-        if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X):
+        if (
+            pyxel.btnp(pyxel.KEY_RETURN)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X)
+            or pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+        ):
             self.scene = SCENE_PLAY
             self.player.x = pyxel.width / 2
             self.player.y = pyxel.height - 20
@@ -351,7 +372,7 @@ class App:
         pyxel.text(43, 76, "by Comviva", pyxel.frame_count % 16)
         pyxel.text(20, 86, "Earn 1MB data", 7)
         pyxel.text(20, 96, "for every alien killed!", 7)
-        pyxel.text(31, 126, "- PRESS ENTER -", 13)
+        pyxel.text(31, 126, "Touch to Play", 13)
 
     def draw_play_scene(self):
         self.player.draw()
@@ -367,7 +388,13 @@ class App:
         pyxel.text(43, 66, "GAME OVER", 8)
         pyxel.text(15, 76, f"Congrats! You have earned", 7)
         pyxel.text(30, 86, f"{self.earned_mb} MB of data!", 7)
-        pyxel.text(31, 126, "- PRESS ENTER -", 13)
+        pyxel.text(31, 126, "Touch to Play", 13)
+        if pyxel.frame_count % 30 < 15:
+            # Add Blinking Text in 2 lines -
+            # Powered By
+            # MobiLytix Rewards
+            pyxel.text(30, 106, "Powered By", 7)
+            pyxel.text(30, 116, "MobiLytix Rewards", 7)
         # Add the game over logic to call the API
         if self.game_over:
             self.call_api(self.earned_mb)
